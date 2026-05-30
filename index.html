@@ -68,12 +68,12 @@
     </header>
 
     <div class="task-pool card">
-        <h2>任务备选池 <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(云端同步版：多端更改自动覆盖同步)</span></h2>
+        <h2>任务备选池 <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(云端私人通道版：数据自动互通)</span></h2>
         
         <div class="quick-input-area">
             <textarea id="bulk-task-input" placeholder="输入想法... 按回车(Enter)直接添加；多条想法请换行(Shift+Enter)"></textarea>
             <div class="input-tip">
-                <span>💡 支持多端数据无缝互通</span>
+                <span>💡 提示：输入内容支持多端自动实时无缝覆盖同步</span>
                 <button class="btn-start" style="padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.8rem;" onclick="handleBulkSubmit()">导入想法</button>
             </div>
         </div>
@@ -102,12 +102,55 @@
 </div>
 
 <script>
-    // ！！！请在首次运行后，在浏览器控制台查看或记录您的专属云同步 ID ！！！
-    let syncBinId = localStorage.getItem('energy_sync_bin_id') || "66585141acd3477ab609fa20"; // 默认内置公共公共测试仓
+    // 固定的私人专属云通道 ID
+    const syncBinId = "66589f82acd3477ab610a2b4"; 
 
+    // 初始化你的原始完整任务
     const defaultCategories = [
-        { id: "cat-1", name: "✨ 核心/低能量首选", tasks: [{id: "t-1", text: "念《古兰经》- 雅辛章"}] },
-        { id: "cat-3", name: "📚 练习与深造 (高智力挑战)", tasks: [{id: "t-5", text: "练习阿拉伯语语法"}, {id: "t-7", text: "研读 CASIS 文章/书籍"}] }
+        { 
+            id: "cat-1", 
+            name: "✨ 核心/低能量首选", 
+            tasks: [
+                {id: "t-1", text: "念《古兰经》- 雅辛章"},
+                {id: "t-2", text: "念《古兰经》- 寻回内心平静"}
+            ] 
+        },
+        { 
+            id: "cat-2", 
+            name: "🎙️ 创作与筹备", 
+            tasks: [
+                {id: "t-3", text: "准备“微光”系列内容"},
+                {id: "t-4", text: "录制“微光”音频/视频"}
+            ] 
+        },
+        { 
+            id: "cat-3", 
+            name: "📚 练习与深造 (高智力挑战)", 
+            tasks: [
+                {id: "t-5", text: "练习阿拉伯语语法"},
+                {id: "t-6", text: "研究教育学前沿理论"},
+                {id: "t-7", text: "研读 CASIS 文章/书籍"},
+                {id: "t-8", text: "专注练习写作素养 (15分钟)"},
+                {id: "t-9", text: "案例深剖：铺满草稿纸硬核推演"}
+            ] 
+        },
+        { 
+            id: "cat-4", 
+            name: "🌐 调研与探索", 
+            tasks: [
+                {id: "t-10", text: "调查印度尼西亚大学信息"},
+                {id: "t-11", text: "探索最新的 AI 效率工具"}
+            ] 
+        },
+        { 
+            id: "cat-5", 
+            name: "☕ 休闲与校对", 
+            tasks: [
+                {id: "t-12", text: "看一场优质的 Ted Talk"},
+                {id: "t-13", text: "看一部高分纪录片"},
+                {id: "t-14", text: "推进论文/手稿校对工作"}
+            ] 
+        }
     ];
 
     let poolCategories = defaultCategories;
@@ -130,20 +173,20 @@
         showSyncStatus(true);
         try {
             const res = await fetch(`https://api.jsonbin.io/v3/b/${syncBinId}/latest`, {
-                headers: { "X-Master-Key": "$2a$10$W2vE2QhM5tI15r9Gv9gYreZlR1O0Y6bU.fNf11K/R.h8H/gbyX2jq" } // 内置免费免密通道
+                headers: { "X-Master-Key": "$2a$10$W2vE2QhM5tI15r9Gv9gYreZlR1O0Y6bU.fNf11K/R.h8H/gbyX2jq" }
             });
             const resData = await res.json();
-            if (resData.record) {
-                poolCategories = resData.record.pool || defaultCategories;
+            if (resData.record && resData.record.pool) {
+                poolCategories = resData.record.pool;
                 todayTasks = resData.record.today || [];
                 historyLogs = resData.record.history || [];
                 renderAll();
+            } else {
+                // 首次如果云端为空，自动把初始数据推上去初始化
+                saveCloudData();
             }
         } catch (e) {
-            console.log("云端数据读取失败，启用本地缓存备份", e);
-            poolCategories = JSON.parse(localStorage.getItem('energy_pool_v2')) || defaultCategories;
-            todayTasks = JSON.parse(localStorage.getItem('energy_today_v2')) || [];
-            historyLogs = JSON.parse(localStorage.getItem('energy_history_v2')) || [];
+            console.log("云端读取失败，启用本地预设", e);
             renderAll();
         }
         showSyncStatus(false);
@@ -151,10 +194,6 @@
 
     // 云端数据推送 (Push)
     async function saveCloudData() {
-        localStorage.setItem('energy_pool_v2', JSON.stringify(poolCategories));
-        localStorage.setItem('energy_today_v2', JSON.stringify(todayTasks));
-        localStorage.setItem('energy_history_v2', JSON.stringify(historyLogs));
-        
         showSyncStatus(true);
         try {
             await fetch(`https://api.jsonbin.io/v3/b/${syncBinId}`, {
@@ -179,7 +218,7 @@
         loadCloudData();
     }
 
-    // --- 核心业务逻辑（继承自旧版本，合并了云同步触发） ---
+    // --- 核心业务逻辑 ---
     const bulkInput = document.getElementById('bulk-task-input');
     bulkInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleBulkSubmit(); }
@@ -260,7 +299,7 @@
         });
     }
 
-    // --- 拖拽底层算法驱动（云同步无缝适配） ---
+    // --- 拖拽算法 ---
     let draggedCategoryEl = null, draggedTaskEl = null;
     function handleCategoryDragStart(e) { if(e.target.className.includes('category-block')) { draggedCategoryEl = e.target; e.target.classList.add('dragging'); } }
     function handleCategoryDragOver(e) { e.preventDefault(); if (!draggedCategoryEl || draggedCategoryEl === this) return; const container = document.getElementById('pool-container'); const children = [...container.children]; const currIdx = children.indexOf(draggedCategoryEl); const targetIdx = children.indexOf(this); if (currIdx < targetIdx) container.insertBefore(draggedCategoryEl, this.nextSibling); else container.insertBefore(draggedCategoryEl, this); const [moved] = poolCategories.splice(currIdx, 1); poolCategories.splice(targetIdx, 0, moved); }
